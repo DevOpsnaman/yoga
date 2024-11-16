@@ -22,29 +22,38 @@ jobs:
 
     # Step 3: Deploy Website Templates to Apache2
     - name: Deploy Website
+      env:
+        EC2_HOST: ${{ secrets.EC2HOST }}
+        REMOTE_USER: ${{ secrets.EC2USER }}
+        APACHE_ROOT: ${{ secrets.APACHEROOT }}
+        LOCAL_WEBSITE_DIR: "path/to/your/templates" # Update this path to your local directory
       run: |
-        # Define variables from secrets
-        EC2_HOST=${{ secrets.EC2HOST }}
-        REMOTE_USER=${{ secrets.EC2USER }}
-        APACHE_ROOT=${{ secrets.APACHEROOT }}
-        LOCAL_WEBSITE_DIR="path/to/your/templates"  # Update this path to your local directory
+        # Validate variables
+        if [ -z "$EC2_HOST" ] || [ -z "$REMOTE_USER" ] || [ -z "$APACHE_ROOT" ]; then
+          echo "One or more required secrets (EC2_HOST, REMOTE_USER, APACHE_ROOT) are missing. Exiting."
+          exit 1
+        fi
 
-        # Ensure the local directory exists
         if [ ! -d "$LOCAL_WEBSITE_DIR" ]; then
           echo "Local website directory $LOCAL_WEBSITE_DIR does not exist. Exiting."
           exit 1
         fi
 
+        echo "Starting deployment to EC2 Apache2 server..."
+
         # Remove old content from Apache root and upload new files
         ssh -o StrictHostKeyChecking=no $REMOTE_USER@$EC2_HOST << EOF
+          echo "Cleaning up old files in $APACHE_ROOT..."
           sudo rm -rf $APACHE_ROOT/*
           sudo mkdir -p $APACHE_ROOT
         EOF
 
         # Copy new templates to the EC2 instance
+        echo "Copying new website templates to EC2 instance..."
         scp -o StrictHostKeyChecking=no -r $LOCAL_WEBSITE_DIR/* $REMOTE_USER@$EC2_HOST:$APACHE_ROOT
 
         # Adjust permissions and restart Apache2
+        echo "Adjusting permissions and restarting Apache2..."
         ssh -o StrictHostKeyChecking=no $REMOTE_USER@$EC2_HOST << EOF
           sudo chmod -R 755 $APACHE_ROOT
           sudo chown -R www-data:www-data $APACHE_ROOT
