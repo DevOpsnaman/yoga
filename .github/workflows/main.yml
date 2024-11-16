@@ -18,16 +18,16 @@ jobs:
     - name: Set up SSH
       uses: webfactory/ssh-agent@v0.5.3
       with:
-        ssh-private-key: ${{ secrets.EC2SSHPRIVATEKEY }}
+        ssh-private-key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
 
-    # Step 3: Deploy to EC2
-    - name: Deploy Website Templates to Apache2
+    # Step 3: Deploy Website Templates to Apache2
+    - name: Deploy Website
       run: |
         # Define variables
-        EC2_HOST=${{ secrets.EC2HOST }}
-        REMOTE_USER="EC2USER"
-        APACHEROOT="/var/www/html"
-        LOCAL_WEBSITE_DIR="path/to/your/templates" # Update this path
+        EC2_HOST=${{ secrets.EC2_HOST }}
+        REMOTE_USER="ec2-user"  # Replace with your EC2 instance username if different
+        APACHE_ROOT="/var/www/html"
+        LOCAL_WEBSITE_DIR="path/to/your/templates"  # Update to the correct folder path in your repo
 
         # Ensure the local directory exists
         if [ ! -d "$LOCAL_WEBSITE_DIR" ]; then
@@ -35,19 +35,19 @@ jobs:
           exit 1
         fi
 
-        # Remove old content and deploy new files
-        ssh -o StrictHostKeyChecking=no $REMOTEUSER@$EC2HOST << EOF
-          sudo rm -rf $APACHEROOT/*
-          sudo mkdir -p $APACHEROOT
+        # Remove old content from Apache root and upload new files
+        ssh -o StrictHostKeyChecking=no $REMOTE_USER@$EC2_HOST << EOF
+          sudo rm -rf $APACHE_ROOT/*
+          sudo mkdir -p $APACHE_ROOT
         EOF
 
         # Copy new templates to the EC2 instance
-        scp -o StrictHostKeyChecking=no -r $LOCAL_WEBSITE_DIR/* $REMOTE_USER@$EC2_HOST:$APACHEROOT
+        scp -o StrictHostKeyChecking=no -r $LOCAL_WEBSITE_DIR/* $REMOTE_USER@$EC2_HOST:$APACHE_ROOT
 
-        # Set permissions and restart Apache2
-        ssh -o StrictHostKeyChecking=no $REMOTE_USER@$EC2HOST << EOF
-          sudo chmod -R 755 $APACHEROOT
-          sudo chown -R www-data:www-data $APACHEROOT
+        # Adjust permissions and restart Apache2
+        ssh -o StrictHostKeyChecking=no $REMOTE_USER@$EC2_HOST << EOF
+          sudo chmod -R 755 $APACHE_ROOT
+          sudo chown -R www-data:www-data $APACHE_ROOT
           sudo systemctl restart apache2
           echo "Deployment completed successfully."
         EOF
