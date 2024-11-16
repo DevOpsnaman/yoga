@@ -1,0 +1,53 @@
+name: Deploy to EC2 Apache2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Checkout the repository
+    - name: Checkout Code
+      uses: actions/checkout@v2
+
+    # Step 2: Set up SSH Agent
+    - name: Set up SSH
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.EC2SSHPRIVATEKEY }}
+
+    # Step 3: Deploy to EC2
+    - name: Deploy Website Templates to Apache2
+      run: |
+        # Define variables
+        EC2_HOST=${{ secrets.EC2HOST }}
+        REMOTE_USER="EC2USER"
+        APACHEROOT="/var/www/html"
+        LOCAL_WEBSITE_DIR="path/to/your/templates" # Update this path
+
+        # Ensure the local directory exists
+        if [ ! -d "$LOCAL_WEBSITE_DIR" ]; then
+          echo "Local website directory $LOCAL_WEBSITE_DIR does not exist. Exiting."
+          exit 1
+        fi
+
+        # Remove old content and deploy new files
+        ssh -o StrictHostKeyChecking=no $REMOTEUSER@$EC2HOST << EOF
+          sudo rm -rf $APACHEROOT/*
+          sudo mkdir -p $APACHEROOT
+        EOF
+
+        # Copy new templates to the EC2 instance
+        scp -o StrictHostKeyChecking=no -r $LOCAL_WEBSITE_DIR/* $REMOTE_USER@$EC2_HOST:$APACHEROOT
+
+        # Set permissions and restart Apache2
+        ssh -o StrictHostKeyChecking=no $REMOTE_USER@$EC2HOST << EOF
+          sudo chmod -R 755 $APACHEROOT
+          sudo chown -R www-data:www-data $APACHEROOT
+          sudo systemctl restart apache2
+          echo "Deployment completed successfully."
+        EOF
