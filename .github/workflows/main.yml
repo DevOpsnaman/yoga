@@ -18,16 +18,16 @@ jobs:
     - name: Set up SSH
       uses: webfactory/ssh-agent@v0.5.3
       with:
-        ssh-private-key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+        ssh-private-key: ${{ secrets.EC2SSHPRIVATEKEY }}
 
     # Step 3: Deploy Website Templates to Apache2
     - name: Deploy Website
       run: |
-        # Define variables
-        EC2_HOST=${{ secrets.EC2_HOST }}
-        REMOTE_USER="ec2-user"  # Replace with your EC2 instance username if different
-        APACHE_ROOT="/var/www/html"
-        LOCAL_WEBSITE_DIR="path/to/your/templates"  # Update to the correct folder path in your repo
+        # Define variables from secrets
+        EC2_HOST=${{ secrets.EC2HOST }}
+        REMOTE_USER=${{ secrets.EC2USER }}
+        APACHE_ROOT=${{ secrets.APACHEROOT }}
+        LOCAL_WEBSITE_DIR="path/to/your/templates"  # Update this path to your local directory
 
         # Ensure the local directory exists
         if [ ! -d "$LOCAL_WEBSITE_DIR" ]; then
